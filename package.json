@@ -1,0 +1,24 @@
+{
+  "name": "ocr-ext",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build"
+  },
+  "dependencies": {
+    "@tesseract.js-data/chi_sim": "^1.0.0",
+    "@tesseract.js-data/eng": "^1.0.0",
+    "tesseract.js": "^7.0.0",
+    "tesseract.js-core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.3",
+    "@types/chrome": "^0.1.1",
+    "@types/node": "^24.0.15",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.5",
+    "vite-plugin-zip-pack": "^1.2.4"
+  }
+}
