@@ -7,7 +7,7 @@ export const setupScreenshot = (
   //imageContainer: HTMLImageElement,
 ) => {
   button.addEventListener('click', async () => {
-    const screenshotUrl = await chrome.tabs.captureVisibleTab();
+    const screenshotUrl = await browser.tabs.captureVisibleTab();
     const imageContainer = document.createElement('img');
     const translationContainer = document.createElement('p');
     const translateButton = document.createElement('button');
@@ -16,10 +16,10 @@ export const setupScreenshot = (
     let progressBars = new Map<string, HTMLProgressElement>();
     translateButton.onclick = async () => {
       const worker = await createWorker('chi_sim', 1, {
-        workerPath: chrome.runtime.getURL('node_modules/tesseract.js/dist/worker.min.js'),
-        corePath: chrome.runtime.getURL('node_modules/tesseract.js/node_modules/tesseract.js-core/'),
-        //corePath: chrome.runtime.getURL('node_modules/tesseract.js-core/tesseract-core.wasm.js'),
-        //langPath: chrome.runtime.getURL('node_modules/@tesseract.js-data/'),
+        //workerPath: browser.runtime.getURL('node_modules/tesseract.js/dist/worker.min.js'),
+        //corePath: browser.runtime.getURL('node_modules/tesseract.js/node_modules/tesseract.js-core/'),
+        //corePath: browser.runtime.getURL('node_modules/tesseract.js-core/tesseract-core.wasm.js'),
+        //langPath: browser.runtime.getURL('node_modules/@tesseract.js-data/'),
         workerBlobURL: false,
         logger: (m) => {
           console.log(m)

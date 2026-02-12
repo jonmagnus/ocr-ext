@@ -1,0 +1,60 @@
+export type OCR_QUERY = {
+  type: 'OCR_QUERY',
+  payload: {
+    tabId: number,
+    windowId: number,
+    width: number,
+    height: number,
+    top: number,
+    left: number,
+    pixelRatio: number,
+  },
+};
+
+export const instanceOfOcrQuery = (m: any): m is OCR_QUERY => {
+  return m && 'type' in m && m.type == 'OCR_QUERY';
+}
+
+export type OCR_RESULT = {
+  type: 'OCR_RESULT',
+  payload: {
+    imageUrl: string,
+    text: string,
+  },
+};
+
+export const instanceOfOcrResult = (m: any): m is OCR_RESULT => {
+  return m && 'type' in m && m.type == 'OCR_RESULT';
+}
+
+export type SCREENSHOT_REQUEST = {
+  type: 'SCREENSHOT_REQUEST',
+  payload: {
+    windowId: number,
+  },
+};
+
+export const instanceOfScreenshotRequest = (m: any): m is SCREENSHOT_REQUEST => {
+  return m && 'type' in m && m.type == 'SCREENSHOT_REQUEST';
+}
+
+
+export type OFFSCREEN_DOCUMENT_REQUEST = {
+  type: 'OFFSCREEN_DOCUMENT_REQUEST',
+};
+
+export const instanceOfOffscreenDocumentRequest = (m: any): m is OFFSCREEN_DOCUMENT_REQUEST => {
+  return m && 'type' in m && m.type == 'OFFSCREEN_DOCUMENT_REQUEST';
+}
+
+export type CANVAS_SCRIPT_REQUEST = {
+  type: 'CANVAS_SCRIPT_REQUEST',
+  payload: {
+    tabId: number,
+    windowId: number,
+  },
+};
+
+export const instanceOfCanvasScriptRequest = (m: any): m is CANVAS_SCRIPT_REQUEST => {
+  return m && 'type' in m && m.type == 'CANVAS_SCRIPT_REQUEST';
+}

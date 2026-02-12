@@ -1,6 +1,6 @@
-import { OCR_QUERY, OFFSCREEN_DOCUMENT_REQUEST } from './messages';
+import { OCR_QUERY, OFFSCREEN_DOCUMENT_REQUEST, instanceOfCanvasScriptRequest } from '@/utils/messages';
 
-export const canvasScript = (tabId: number, windowId: number) => {
+const canvasScript = (tabId: number, windowId: number) => {
   console.log(`Received canvasScript with tabId ${tabId}`);
   let mouse = {
     x: 0,
@@ -50,8 +50,8 @@ export const canvasScript = (tabId: number, windowId: number) => {
           pixelRatio: window.devicePixelRatio,
         },
       };
-      chrome.runtime.sendMessage(offscreenDocumentRequest)
-      .then(() => chrome.runtime.sendMessage(ocrQuery))
+      browser.runtime.sendMessage(offscreenDocumentRequest)
+      .then(() => browser.runtime.sendMessage(ocrQuery))
       .then((m) => {
         if (m?.type == 'OCR_RESULT') {
           const resultDiv = document.createElement('div');
@@ -100,15 +100,20 @@ export const canvasScript = (tabId: number, windowId: number) => {
   ctx.canvas.width = window.innerWidth;
   ctx.canvas.height = window.innerHeight;
   document.body.insertBefore(canvasWrapper, document.body.firstChild)
-};
+}
 
-export const injectCanvas = async () => {
-  let [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  if (tab?.id) {
-    chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: canvasScript,
-      args: [tab.id, tab.windowId],
-    }).then(() => console.log('Script injected'));
+export default defineContentScript({
+  registration: 'runtime',
+  main() {
+    browser.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
+      if (instanceOfCanvasScriptRequest(message)) {
+        console.log('Executing canvasScript');
+        canvasScript(message.payload.tabId, message.payload.windowId);
+        return true;
+      } else {
+        return false;
+      }
+    });
   }
-};
+});
+

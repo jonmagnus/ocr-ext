@@ -1,8 +1,8 @@
 import crxLogo from '@/assets/crx.svg'
 import tsLogo from '@/assets/ts.svg'
 import viteLogo from '@/assets/vite.svg'
-import { setupCounter } from './counter.ts'
-import { setupScreenshot } from './screenshot.ts'
+import { setupCounter } from './counter'
+import { setupScreenshot } from './screenshot'
 import './style.css'
 
 document.querySelector('#app')!.innerHTML = `

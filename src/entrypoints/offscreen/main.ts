@@ -1,5 +1,13 @@
-import { createWorker, Worker, LoggerMessage } from 'tesseract.js';
-import { instanceOfOcrQuery, SCREENSHOT_REQUEST, OCR_RESULT } from '../messages.ts'
+import { createWorker, Worker, LoggerMessage } from 'tesseract.js'
+import { instanceOfOcrQuery, SCREENSHOT_REQUEST, OCR_RESULT } from '@/utils/messages'
+import workerPath from 'tesseract.js/dist/worker.min.js?url'
+/*
+import corePath from 'tesseract.js-core/?url'
+import langPath from '@tesseract.js-data/chi_sim?url'
+*/
+import corePath from 'tesseract.js-core/tesseract-core-lstm.wasm.js?url'
+//import langPath from '@tesseract.js-data/chi_sim/4.0.0/chi_sim.traineddata.gz?url'
+//import langPath from '@tesseract.js-data/chi_sim?url'
 
 document.querySelector('#app')!.innerHTML = `
   <div>
@@ -31,6 +39,15 @@ const logDivLogger = (m: LoggerMessage) => {
   }
 }
 
+const logDivErrorHandler = (e: Error) => {
+  const errorP = document.createElement('p');
+  errorP.innerHTML = JSON.stringify(e, null, 2);
+  errorP.style.backgroundColor = 'red';
+  const pDiv = document.createElement('div');
+  pDiv.appendChild(errorP);
+  logDiv.append(pDiv);
+}
+
 let worker: Worker | null = null;
 let creatingWorker: Promise<void> | null = null;
 const initWorker = async () => {
@@ -39,20 +56,21 @@ const initWorker = async () => {
     await creatingWorker;
   } else if (!worker) {
     creatingWorker = createWorker('chi_sim', 1, {
-      workerPath: chrome.runtime.getURL('node_modules/tesseract.js/dist/worker.min.js'),
-      corePath: chrome.runtime.getURL('node_modules/tesseract.js/node_modules/tesseract.js-core/'),
-      langPath: chrome.runtime.getURL('node_modules/@tesseract.js-data/chi_sim'),
+      workerPath,
+      corePath,
+      //langPath,
       logger: logDivLogger,
+      errorHandler: logDivErrorHandler,
       workerBlobURL: false,
     })
-    .then(w => { worker = w; }, e => console.warn(e));
+    .then(w => { worker = w; }, e => {throw new Error(e)});
     await creatingWorker;
     creatingWorker = null;
   }
 };
 initWorker();
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse)  => {
+browser.runtime.onMessage.addListener((message, _sender, sendResponse)  => {
   if (instanceOfOcrQuery(message)) {
     const {
       width: width_ , height: height_,
@@ -65,7 +83,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse)  => {
       type: 'SCREENSHOT_REQUEST',
       payload: { windowId },
     };
-    chrome.runtime.sendMessage(screenshotRequest)
+    browser.runtime.sendMessage(screenshotRequest)
     .then(async (screenshotUrl) => {
       const canvas = new OffscreenCanvas(width, height);
       const ctx = canvas.getContext('2d')!;
