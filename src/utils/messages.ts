@@ -47,14 +47,11 @@ export const instanceOfOffscreenDocumentRequest = (m: any): m is OFFSCREEN_DOCUM
   return m && 'type' in m && m.type == 'OFFSCREEN_DOCUMENT_REQUEST';
 }
 
-export type CANVAS_SCRIPT_REQUEST = {
-  type: 'CANVAS_SCRIPT_REQUEST',
-  payload: {
-    tabId: number,
-    windowId: number,
-  },
+export type CANVAS_SCRIPT_PING = {
+  type: 'CANVAS_SCRIPT_PING',
 };
 
-export const instanceOfCanvasScriptRequest = (m: any): m is CANVAS_SCRIPT_REQUEST => {
-  return m && 'type' in m && m.type == 'CANVAS_SCRIPT_REQUEST';
+export const instanceOfCanvasScriptPing = (m: any): m is CANVAS_SCRIPT_PING => {
+  return m && 'type' in m && m.type == 'CANVAS_SCRIPT_PING';
 }
+

@@ -1,4 +1,8 @@
-import { OCR_QUERY, OFFSCREEN_DOCUMENT_REQUEST, instanceOfCanvasScriptRequest } from '@/utils/messages';
+import {
+  OCR_QUERY,
+  OFFSCREEN_DOCUMENT_REQUEST,
+  CANVAS_SCRIPT_PING,
+} from '@/utils/messages';
 
 const canvasScript = (tabId: number, windowId: number) => {
   console.log(`Received canvasScript with tabId ${tabId}`);
@@ -105,7 +109,9 @@ const canvasScript = (tabId: number, windowId: number) => {
 export default defineContentScript({
   registration: 'runtime',
   main() {
+    /*
     browser.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
+      console.log('Received message in canvas script: ', message);
       if (instanceOfCanvasScriptRequest(message)) {
         console.log('Executing canvasScript');
         canvasScript(message.payload.tabId, message.payload.windowId);
@@ -114,6 +120,17 @@ export default defineContentScript({
         return false;
       }
     });
+    console.log('Added event listener for CANVAS_SCRIPT_REQUEST');
+    */
+    const message: CANVAS_SCRIPT_PING = {
+      type: 'CANVAS_SCRIPT_PING',
+    }
+    browser.runtime.sendMessage(message)
+    .then(({ tabId, windowId }) => {
+      console.log('Received response on CANVAS_SCRIPT_PING');
+      canvasScript(tabId, windowId);
+    });
+    console.log('Sent CANVAS_SCRIPT_PING');
   }
 });
 

@@ -13,7 +13,6 @@ export default defineConfig({
         '@tesseract.js-data',
       ],
     },
-    */
     optimizeDeps: {
       exclude: [
         //'tesseract.js',
@@ -21,6 +20,7 @@ export default defineConfig({
         '@tesseract.js-data',
       ],
     }
+    */
   }),
   manifest: {
     name: pkg.name,
