@@ -6,82 +6,108 @@ import {
 
 import './style.css';
 
+type Mouse = {
+  x: number,
+  y: number,
+  startX: number,
+  startY: number,
+};
+
+type Rectangle = {
+  top: number,
+  left: number,
+  height: number,
+  width: number,
+};
+
+const rectangleFromMouse = (mouse: Mouse): Rectangle => ({
+  left: Math.min(mouse.x, mouse.startX),
+  top: Math.min(mouse.y, mouse.startY),
+  width: Math.abs(mouse.x - mouse.startX),
+  height: Math.abs(mouse.y - mouse.startY),
+});
+
+const updateMouse = (
+  event: MouseEvent,
+  mouse: Mouse,
+  rectangle: HTMLDivElement | null,
+) => {
+  mouse.x = event.clientX;
+  mouse.y = event.clientY;
+  if (rectangle) {
+    const { left, top, width, height } = rectangleFromMouse(mouse);
+    [
+      rectangle.style.left,
+      rectangle.style.top,
+      rectangle.style.width,
+      rectangle.style.height,
+    ] = [left, top, width, height].map(v => v + 'px');
+  }
+};
+
+const createResultDiv = (message: OCR_RESULT, rectangle: Rectangle): HTMLDivElement => {
+  const resultDiv = document.createElement('div');
+  const textContainer = document.createElement('p');
+  textContainer.innerHTML = message.payload.text;
+  const croppedImageContainer = document.createElement('img');
+  croppedImageContainer.src = message.payload.imageUrl;
+  resultDiv.appendChild(croppedImageContainer);
+  resultDiv.appendChild(textContainer);
+  resultDiv.className = 'result-div';
+  resultDiv.style.top = rectangle.top + 'px';
+  resultDiv.style.left = rectangle.left + 'px';
+  resultDiv.style.width = rectangle.width + 'px';
+  return resultDiv;
+};
+
 const canvasScript = (container: HTMLElement, tabId: number, windowId: number) => {
   console.log(`Received canvasScript with tabId ${tabId}`);
-  let mouse = {
+  let mouse: Mouse = {
     x: 0,
     y: 0,
     startX: 0,
     startY: 0,
   }
-  let rectangle: HTMLDivElement | null = null;
+  let rectangleDiv: HTMLDivElement | null = null;
   const canvas = document.createElement('canvas');
   canvas.className = 'root-canvas';
   container.appendChild(canvas);
 
   const canvasContext = canvas.getContext('2d')!;
-  if (!canvasContext) {
-    console.warn('Canvas context is null');
-    return;
-  }
   const resizeCanvas = () => {
     canvasContext.canvas.width = window.innerWidth;
     canvasContext.canvas.height = window.innerHeight;
   };
   window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
   const removeCanvas = () => {
     canvas.remove();
     window.removeEventListener('resize', resizeCanvas);
   };
-  resizeCanvas();
-  canvas.addEventListener('mousemove', (e) => {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
-    if (rectangle) {
-      rectangle.style.width = Math.abs(mouse.x - mouse.startX) + 'px';
-      rectangle.style.height = Math.abs(mouse.y - mouse.startY) + 'px';
-      rectangle.style.left = Math.min(mouse.x, mouse.startX) + 'px';
-      rectangle.style.top = Math.min(mouse.y, mouse.startY) + 'px';
-    }
-  });
-
+  canvas.addEventListener('mousemove', (e) => updateMouse(e, mouse, rectangleDiv));
   canvas.addEventListener('click', () => {
-    if (rectangle) {
-      rectangle.remove();
-      rectangle = null;
+    if (rectangleDiv) {
+      rectangleDiv.remove();
+      rectangleDiv = null;
       canvas.style.cursor = 'default';
       container.style.pointerEvents = 'none';
       removeCanvas();
-      const left = Math.min(mouse.x, mouse.startX);
-      const top = Math.min(mouse.y, mouse.startY);
-      const width = Math.abs(mouse.x - mouse.startX);
-      const height = Math.abs(mouse.y - mouse.startY);
       const offscreenDocumentRequest: OFFSCREEN_DOCUMENT_REQUEST = {
         type: 'OFFSCREEN_DOCUMENT_REQUEST',
       };
+      const rectangle = rectangleFromMouse(mouse);
       const ocrQuery: OCR_QUERY = {
         type: 'OCR_QUERY',
         payload: {
-          tabId, windowId, top, left, width, height,
+          tabId, windowId, ...rectangle,
           pixelRatio: window.devicePixelRatio,
         },
       };
       browser.runtime.sendMessage(offscreenDocumentRequest)
       .then(() => browser.runtime.sendMessage(ocrQuery))
-      .then((m) => {
-        if (m?.type == 'OCR_RESULT') {
-          const resultDiv = document.createElement('div');
-          const textContainer = document.createElement('p');
-          textContainer.innerHTML = m.payload.text;
-          const croppedImageContainer = document.createElement('img');
-          croppedImageContainer.src = m.payload.imageUrl;
-          croppedImageContainer.width = ocrQuery.payload.width;
-          resultDiv.appendChild(croppedImageContainer);
-          resultDiv.appendChild(textContainer);
-          resultDiv.className = 'result-div';
-          resultDiv.style.width = width + 'px';
-          resultDiv.style.top = top + 'px';
-          resultDiv.style.left = left + 'px';
+      .then((message) => {
+        if (message?.type == 'OCR_RESULT') {
+          const resultDiv = createResultDiv(message, rectangle);
           resultDiv.onclick = container.remove;
           container.appendChild(resultDiv);
         } else {
@@ -91,11 +117,11 @@ const canvasScript = (container: HTMLElement, tabId: number, windowId: number) =
     } else {
       mouse.startX = mouse.x;
       mouse.startY = mouse.y;
-      rectangle = document.createElement('div');
-      rectangle.className = 'rectangle';
-      rectangle.style.left = mouse.x + 'px';
-      rectangle.style.top = mouse.x + 'px';
-      container.appendChild(rectangle);
+      rectangleDiv = document.createElement('div');
+      rectangleDiv.className = 'rectangle';
+      rectangleDiv.style.left = mouse.x + 'px';
+      rectangleDiv.style.top = mouse.x + 'px';
+      container.appendChild(rectangleDiv);
     }
   });
 }
