@@ -1,0 +1,21 @@
+p {
+    color: black;
+}
+
+.rectangle {
+    position: absolute;
+    border: 1px solid red;
+}
+
+.result-div {
+    position: absolute;
+    background-color: white;
+    pointer-events: auto;
+}
+
+.root-canvas {
+    cursor: crosshair;
+    top: 0;
+    left: 0;
+    position: absolute;
+}

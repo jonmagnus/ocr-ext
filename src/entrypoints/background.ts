@@ -9,7 +9,9 @@ const injectCanvas = async () => {
   if (tab?.id) {
     browser.scripting.executeScript({
       target: { tabId: tab.id },
+      //files: ['/square-selector.js'],
       files: ['/content-scripts/square-selector.js'],
+      //files: ['/content-scripts/unstyled-square-selector.js'],
     })
     .then(
       () => console.log('Script injected'),
