@@ -9,9 +9,7 @@ const injectCanvas = async () => {
   if (tab?.id) {
     browser.scripting.executeScript({
       target: { tabId: tab.id },
-      //files: ['/square-selector.js'],
       files: ['/content-scripts/square-selector.js'],
-      //files: ['/content-scripts/unstyled-square-selector.js'],
     })
     .then(
       () => console.log('Script injected'),
@@ -52,22 +50,26 @@ export default defineBackground({
     });
 
     browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      console.log('Received message i background: ', message);
       // TODO: Do validation of sender for most requests.
-      if (instanceOfScreenshotRequest(message)) {
-        browser.tabs.captureVisibleTab(message.payload.windowId)
-          .then(sendResponse);
-        return true;
-      } else if (instanceOfOffscreenDocumentRequest(message)) {
-        setupOffscreenDocument().then(sendResponse);
-        return true;
-      } else if (instanceOfCanvasScriptPing(message) && sender?.tab) {
-        sendResponse({
-          tabId: sender.tab.id!,
-          windowId: sender.tab.windowId,
-        });
-        return true;
-      } else {
-        return false;
+      switch (true) {
+        case instanceOfScreenshotRequest(message):
+          browser.tabs.captureVisibleTab(message.payload.windowId)
+            .then(sendResponse);
+          return true;
+        case instanceOfOffscreenDocumentRequest(message):
+          setupOffscreenDocument().then(sendResponse);
+          return true;
+        //case instanceOfCanvasScriptPing(message) && sender?.tab:
+        case instanceOfCanvasScriptPing(message):
+          console.log('Received canvas script ping!', sender.tab);
+          sendResponse({
+            tabId: sender.tab!.id!,
+            windowId: sender.tab!.windowId,
+          });
+          return true;
+        default:
+          return false;
       }
     });
     setupOffscreenDocument();

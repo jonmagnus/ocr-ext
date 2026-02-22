@@ -1,0 +1,4 @@
+supportedArchitechtures:
+  cpu:
+    - current
+    - wasm32
