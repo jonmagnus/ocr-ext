@@ -55,3 +55,24 @@ export const instanceOfCanvasScriptPing = (m: any): m is CANVAS_SCRIPT_PING => {
   return m && 'type' in m && m.type == 'CANVAS_SCRIPT_PING';
 }
 
+export type TOKENIZE_REQUEST = {
+  type: 'TOKENIZE_REQUEST',
+  payload: {
+    text: string,
+  },
+};
+
+export const instanceOfTokenizeRequest = (m: any): m is TOKENIZE_REQUEST => {
+  return m?.type == 'TOKENIZE_REQUEST';
+}
+
+export type TOKENIZE_RESPONSE = {
+  type: 'TOKENIZE_RESPONSE',
+  payload: {
+    cut: Array<string>,
+  },
+};
+
+export const instanceOfTokenizeResponse = (m: any): m is TOKENIZE_RESPONSE => {
+  return m?.type == 'TOKENIZE_RESPONSE';
+}

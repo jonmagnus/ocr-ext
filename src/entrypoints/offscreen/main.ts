@@ -1,13 +1,7 @@
-import { createWorker, Worker, LoggerMessage } from 'tesseract.js'
-import { instanceOfOcrQuery, SCREENSHOT_REQUEST, OCR_RESULT } from '@/utils/messages'
-import workerPath from 'tesseract.js/dist/worker.min.js?url'
-/*
-import corePath from 'tesseract.js-core/?url'
-import langPath from '@tesseract.js-data/chi_sim?url'
-*/
-import corePath from 'tesseract.js-core/tesseract-core-lstm.wasm.js?url'
-//import langPath from '@tesseract.js-data/chi_sim/4.0.0/chi_sim.traineddata.gz?url'
-//import langPath from '@tesseract.js-data/chi_sim?url'
+import { LoggerMessage } from 'tesseract.js';
+import { instanceOfOcrQuery } from '@/utils/messages'
+import { handleOcrRequest, initWorker } from './ocr-handler'
+import { handleTokenizeRequest } from './tokenization-handler'
 
 document.querySelector('#app')!.innerHTML = `
   <div>
@@ -40,6 +34,7 @@ const logDivLogger = (m: LoggerMessage) => {
 }
 
 const logDivErrorHandler = (e: Error) => {
+  console.warn('Worker: ', e);
   const errorP = document.createElement('p');
   errorP.innerHTML = JSON.stringify(e, null, 2);
   errorP.style.backgroundColor = 'red';
@@ -47,79 +42,20 @@ const logDivErrorHandler = (e: Error) => {
   pDiv.appendChild(errorP);
   logDiv.append(pDiv);
 }
-
-let worker: Worker | null = null;
-let creatingWorker: Promise<void> | null = null;
-const initWorker = async () => {
-  if (worker) return;
-  if (creatingWorker) {
-    await creatingWorker;
-  } else if (!worker) {
-    creatingWorker = createWorker('chi_sim', 1, {
-      workerPath,
-      corePath,
-      //langPath,
-      logger: logDivLogger,
-      errorHandler: logDivErrorHandler,
-      workerBlobURL: false,
-    })
-    .then(w => { worker = w; }, e => {throw new Error(e)});
-    await creatingWorker;
-    creatingWorker = null;
-  }
-};
-initWorker();
+initWorker(logDivLogger, logDivErrorHandler);
 
 browser.runtime.onMessage.addListener((message, _sender, sendResponse)  => {
-  if (instanceOfOcrQuery(message)) {
-    const {
-      width: width_ , height: height_,
-      left: left_, top: top_ ,
-      pixelRatio,
-      windowId
-    } = message.payload;
-    const [width, height, left, top] = [width_, height_, left_, top_].map(v => v * pixelRatio);
-    const screenshotRequest: SCREENSHOT_REQUEST = {
-      type: 'SCREENSHOT_REQUEST',
-      payload: { windowId },
-    };
-    browser.runtime.sendMessage(screenshotRequest)
-    .then(async (screenshotUrl) => {
-      const canvas = new OffscreenCanvas(width, height);
-      const ctx = canvas.getContext('2d')!;
-
-      const response: Response = await fetch(screenshotUrl)
-      if (!response.ok) {
-        throw new Error(`Got non-ok response from screenshotUrl fetch ${response}`);
-      }
-      const screenshotBitmap = await response.blob().then(createImageBitmap)
-      ctx.drawImage(screenshotBitmap, left, top, width, height, 0, 0, width, height);
-
-      const croppedImageDataUrl = await canvas.convertToBlob()
-      .then((blob: Blob) => new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result!.toString());
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      }));
-
-      let recognizedText: string = '';
-      initWorker();
-      if (worker) {
-        const { data: { text }} = await worker.recognize(canvas);
-        recognizedText = text;
-      } else {
-        throw Error('Worker not constructed');
-      }
-
-      const ocrResult: OCR_RESULT = {
-        type: 'OCR_RESULT',
-        payload: { imageUrl: croppedImageDataUrl, text: recognizedText },
-      }
-      sendResponse(ocrResult);
-    });
-    return true;
-  } else {
-    return false;
+  console.log('Received message in offscreen: ', message);
+  switch (true) {
+    case instanceOfOcrQuery(message):
+      handleOcrRequest(message, logDivLogger, logDivErrorHandler)
+      .then(sendResponse);
+      return true;
+    case instanceOfTokenizeRequest(message):
+      handleTokenizeRequest(message)
+      .then(sendResponse);
+      return true;
+    default:
+      return false;
   }
 });

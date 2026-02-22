@@ -2,6 +2,7 @@ import {
   OCR_QUERY,
   OFFSCREEN_DOCUMENT_REQUEST,
   CANVAS_SCRIPT_PING,
+  TOKENIZE_REQUEST,
 } from '@/utils/messages';
 
 import './style.css';
@@ -31,7 +32,7 @@ const updateMouse = (
   event: MouseEvent,
   mouse: Mouse,
   rectangle: HTMLDivElement | null,
-) => {
+): void => {
   mouse.x = event.clientX;
   mouse.y = event.clientY;
   if (rectangle) {
@@ -49,6 +50,10 @@ const createResultDiv = (message: OCR_RESULT, rectangle: Rectangle): HTMLDivElem
   const resultDiv = document.createElement('div');
   const textContainer = document.createElement('p');
   textContainer.innerHTML = message.payload.text;
+  /*
+  const dictContainer = document.createElement('p');
+  dictContainer.innerHTML = cut.join('\n');
+  */
   const croppedImageContainer = document.createElement('img');
   croppedImageContainer.src = message.payload.imageUrl;
   resultDiv.appendChild(croppedImageContainer);
@@ -60,7 +65,7 @@ const createResultDiv = (message: OCR_RESULT, rectangle: Rectangle): HTMLDivElem
   return resultDiv;
 };
 
-const canvasScript = (container: HTMLElement, tabId: number, windowId: number) => {
+const canvasScript = (container: HTMLElement, tabId: number, windowId: number): void => {
   console.log(`Received canvasScript with tabId ${tabId}`);
   let mouse: Mouse = {
     x: 0,
@@ -103,17 +108,35 @@ const canvasScript = (container: HTMLElement, tabId: number, windowId: number) =
           pixelRatio: window.devicePixelRatio,
         },
       };
+      let resultDiv: HTMLDivElement;
       browser.runtime.sendMessage(offscreenDocumentRequest)
       .then(() => browser.runtime.sendMessage(ocrQuery))
       .then((message) => {
         if (message?.type == 'OCR_RESULT') {
-          const resultDiv = createResultDiv(message, rectangle);
+          resultDiv = createResultDiv(message, rectangle);
           resultDiv.onclick = container.remove;
           container.appendChild(resultDiv);
+          const tokenizeRequest: TOKENIZE_REQUEST = {
+            type: 'TOKENIZE_REQUEST',
+            payload: {
+              text: message.payload.text,
+            },
+          };
+          return browser.runtime.sendMessage(tokenizeRequest);
         } else {
-          throw Error(`Did not receive OCR_RESULT from OCR_QUERY: ${m}`);
+          throw Error(`Did not receive OCR_RESULT from OCR_QUERY: ${JSON.stringify(message, null, 2)}`);
         }
-      }).catch(e => console.warn(e));
+      })
+      .then((message) => {
+        if (message?.type == 'TOKENIZE_RESPONSE') {
+          const tokenContainer = document.createElement('p');
+          tokenContainer.textContent = message.payload.cut.join('\n');
+          resultDiv.appendChild(tokenContainer);
+        } else {
+          throw Error(`Did not receive TOKENIZE_RESPONSE from TOKENIZE_REQUEST: ${JSON.stringify(message, null, 2)}`);
+        }
+      })
+      .catch(e => console.warn(e));
     } else {
       mouse.startX = mouse.x;
       mouse.startY = mouse.y;
@@ -136,7 +159,10 @@ export default defineContentScript({
         type: 'CANVAS_SCRIPT_PING',
       }
       console.log('Sending CANVAS_SCRIPT_PING');
-      const { tabId, windowId  } = await browser.runtime.sendMessage(message);
+      const response = await browser.runtime.sendMessage(message)
+        .catch(e => {throw Error(e)});
+      console.warn(response);
+      const { tabId, windowId } = response;
       console.log('Received response on CANVAS_SCRIPT_PING');
       const shadowUi = await createShadowRootUi(ctx, {
         name: 'square-selector',

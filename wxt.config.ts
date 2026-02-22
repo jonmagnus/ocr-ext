@@ -5,28 +5,18 @@ export default defineConfig({
   srcDir: 'src',
   manifestVersion: 3,
   vite: () => ({
-    /*
-    ssr: {
-      noExternal: [
-        'tesseract.js',
-        'tesseract.js-core',
-        '@tesseract.js-data',
-      ],
+    build: {
+      target: 'esnext',
     },
-    optimizeDeps: {
-      exclude: [
-        //'tesseract.js',
-        //'tesseract.js-core',
-        '@tesseract.js-data',
-      ],
-    }
-    */
   }),
   manifest: {
     name: pkg.name,
     version: pkg.version,
     icons: {
       48: 'logo.png',
+    },
+    content_security_policy: {
+      extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
     },
     commands: {
       select: {
