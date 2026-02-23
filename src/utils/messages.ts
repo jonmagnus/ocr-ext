@@ -1,3 +1,5 @@
+import { WordAnnotation } from './types'
+
 export type OCR_QUERY = {
   type: 'OCR_QUERY',
   payload: {
@@ -70,6 +72,7 @@ export type TOKENIZE_RESPONSE = {
   type: 'TOKENIZE_RESPONSE',
   payload: {
     cut: Array<string>,
+    annotation: Array<WordAnnotation>
   },
 };
 

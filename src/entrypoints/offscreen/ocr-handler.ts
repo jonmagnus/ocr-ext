@@ -104,7 +104,7 @@ export const handleOcrRequest = async (
     initWorker(logger, errorHandler);
     if (worker) {
       const { data: { text }} = await worker.recognize(croppedImageCanvas);
-      recognizedText = text;
+      recognizedText = text.replaceAll(' ', '');
     } else {
       throw Error('Worker not constructed');
     }

@@ -13,6 +13,7 @@
     "@node-rs/jieba": "^2.0.1",
     "@tesseract.js-data/chi_sim": "^1.0.0",
     "@tesseract.js-data/eng": "^1.0.0",
+    "cc-cedict": "^1.1.1",
     "tesseract.js": "^7.0.0",
     "tesseract.js-core": "^6.1.2"
   },
