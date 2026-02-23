@@ -1,6 +1,8 @@
 import { Jieba } from '@node-rs/jieba'
 import dictUrl from '@node-rs/jieba/dict.txt?url'
 import { TOKENIZE_REQUEST, TOKENIZE_RESPONSE } from '@/utils/messages'
+import cedict, { SearchResults } from 'cc-cedict'
+import { WordAnnotation } from '@/utils/types'
 
 let jieba: Jieba | null = null;
 let creatingJieba: Promise<void> | null = null;
@@ -27,11 +29,25 @@ initJieba();
 export const handleTokenizeRequest = async (message: TOKENIZE_REQUEST): Promise<TOKENIZE_RESPONSE> => {
   await initJieba();
   const cut = jieba!.cut(message.payload.text);
-  console.warn('TOKENIZE_RESPONSE with cut: ', cut);
+  const annotation: Array<WordAnnotation> = cut.map((key: string) => {
+    const entry: SearchResults = cedict.getBySimplified(
+      key, null, { asObject: false, allowVariants: false },
+    );
+    if (!entry) {
+      return { key, entry: [] };
+    } else {
+      if (!Array.isArray(entry)) {
+        throw Error('Did not receive array from dictionary');
+      }
+      return { key, entry };
+    }
+  })
+  console.warn('TOKENIZE_RESPONSE with annotation: ', annotation);
   const tokenizeResponse: TOKENIZE_RESPONSE = {
     type: 'TOKENIZE_RESPONSE',
     payload: {
       cut,
+      annotation,
     },
   };
   return tokenizeResponse;

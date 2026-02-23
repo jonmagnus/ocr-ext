@@ -6,6 +6,7 @@ import {
 } from '@/utils/messages';
 
 import './style.css';
+import { createTokenContainer } from './token-container'
 
 type Mouse = {
   x: number,
@@ -50,12 +51,9 @@ const createResultDiv = (message: OCR_RESULT, rectangle: Rectangle): HTMLDivElem
   const resultDiv = document.createElement('div');
   const textContainer = document.createElement('p');
   textContainer.innerHTML = message.payload.text;
-  /*
-  const dictContainer = document.createElement('p');
-  dictContainer.innerHTML = cut.join('\n');
-  */
   const croppedImageContainer = document.createElement('img');
   croppedImageContainer.src = message.payload.imageUrl;
+  croppedImageContainer.style.width = rectangle.width + 'px';
   resultDiv.appendChild(croppedImageContainer);
   resultDiv.appendChild(textContainer);
   resultDiv.className = 'result-div';
@@ -129,8 +127,7 @@ const canvasScript = (container: HTMLElement, tabId: number, windowId: number): 
       })
       .then((message) => {
         if (message?.type == 'TOKENIZE_RESPONSE') {
-          const tokenContainer = document.createElement('p');
-          tokenContainer.textContent = message.payload.cut.join('\n');
+          const tokenContainer = createTokenContainer(message.payload.annotation);
           resultDiv.appendChild(tokenContainer);
         } else {
           throw Error(`Did not receive TOKENIZE_RESPONSE from TOKENIZE_REQUEST: ${JSON.stringify(message, null, 2)}`);
