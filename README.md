@@ -1,11 +1,12 @@
 # TODO
 
-- [ ] Migrate to WXT.
-- [ ] Add jieba tokenization.
+- [ ] Filter jieba dictionary based on cc-cedict.
+- [ ] Add a spinner while processing.
+- [ ] Minimize displayed UI.
+- [ ] Implement mobile UI.
+- [ ] Implement queueing OCR queries.
 - [ ] Add event listeners to canvas for window resizing.
 - [ ] Add central configuration for languages.
-- [ ] Add a spinner while processing.
-- [ ] Add webextension-polyfill.
-- [ ] Add ShadowDOM and css styling.
-- [ ] Instead of the whole div containing the text having a white
-    background, make it so that only the text itself has a white background.
+- [x] Migrate to WXT.
+- [x] Add jieba tokenization.
+- [x] Add ShadowDOM and css styling.
