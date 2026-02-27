@@ -8,7 +8,7 @@ const cacheIDB = async (path: string, data: Uint8Array): Promise<void> => {
   const db: IDBDatabase = await new Promise<IDBDatabase>((resolve, reject) => {
     openRequest.onerror = () => reject(openRequest.error);
     openRequest.onsuccess = () => resolve(openRequest.result);
-    openRequest.onupgradeneeded = (_event: Event) => {
+    openRequest.onupgradeneeded = (event: Event) => {
       const db = event.target!.result as IDBDatabase;
       if (!db.objectStoreNames.contains('keyval')) {
         db.createObjectStore('keyval');
@@ -123,6 +123,7 @@ export const initWorker = async (
 
       // Manually cache traineddata for worker.
       await cacheIDB('./chi_sim.traineddata', chi_simData);
+      await worker.reinitialize('chi_sim');
     });
     await creatingWorker;
     creatingWorker = null;
