@@ -3,11 +3,53 @@ import corePath from 'tesseract.js-core/tesseract-core-lstm.wasm.js?url'
 import workerPath from 'tesseract.js/dist/worker.min.js?url'
 import chi_simPath from '@tesseract.js-data/chi_sim/4.0.0/chi_sim.traineddata.gz?url';
 
+const cacheIDB = async (path: string, data: Uint8Array): Promise<void> => {
+  const openRequest = indexedDB.open('keyval-store');
+  const db: IDBDatabase = await new Promise<IDBDatabase>((resolve, reject) => {
+    openRequest.onerror = () => reject(openRequest.error);
+    openRequest.onsuccess = () => resolve(openRequest.result);
+    openRequest.onupgradeneeded = (_event: Event) => {
+      const db = event.target!.result as IDBDatabase;
+      if (!db.objectStoreNames.contains('keyval')) {
+        db.createObjectStore('keyval');
+      }
+    };
+  });
+  const transaction = db.transaction(['keyval'], 'readwrite');
+  const store = transaction.objectStore('keyval');
+  const putRequest = store.put(data, path);
+  await new Promise<IDBValidKey>((resolve, reject) => {
+    putRequest.onerror = () => reject(putRequest.error);
+    putRequest.onsuccess = ()=> resolve(putRequest.result);
+  });
+}
+
 import {
   OCR_QUERY,
   OCR_RESULT,
   SCREENSHOT_REQUEST,
 } from '@/utils/messages'
+
+const consumeStream = async (stream: ReadableStream): Promise<Uint8Array<ArrayBufferLike>> => {
+  const reader = stream.getReader();
+  let totalLength = 0;
+  const encodedChunks: Uint8Array[] = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    encodedChunks.push(value);
+    totalLength += value.length;
+  }
+
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of encodedChunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return result;
+}
 
 const cropImageDataUrl = async (
   dataUrl: string,
@@ -53,21 +95,34 @@ export const initWorker = async (
   if (creatingWorker) {
     await creatingWorker;
   } else if (!worker) {
-    creatingWorker = new Promise(async (_resolve, reject) => {
-      worker = await createWorker('chi_sim', 1, {
+    creatingWorker = new Promise(async () => {
+      // Load no languages.
+      worker = await createWorker([], 1, {
         workerPath,
         corePath,
         logger,
         errorHandler,
         workerBlobURL: false,
       });
+
+      // Bundler automatically unzips when loading.
       const chi_simRes = await fetch(chi_simPath);
+      const chi_simData = await chi_simRes.bytes();
+
+      /* Unzip manually if loading as public asset.
+      const chi_simRes = await fetch('chi_sim.traineddata.gz');
       if (!chi_simRes.ok) {
         reject('Failed to fetch chi_sim trained data.');
         return;
       }
-      const chi_simData = await chi_simRes.bytes();
-      await worker.FS('writeFile', ['chi_sim.traineddata', chi_simData]);
+      const chi_simData = await consumeStream(
+        chi_simRes.body!
+          .pipeThrough(new DecompressionStream('gzip'))
+      );
+      */
+
+      // Manually cache traineddata for worker.
+      await cacheIDB('./chi_sim.traineddata', chi_simData);
     });
     await creatingWorker;
     creatingWorker = null;

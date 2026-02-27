@@ -30,6 +30,8 @@ const logDivLogger = (m: LoggerMessage) => {
       logDiv.appendChild(progressDiv);
       progressBars.set(m.status, bar);
     }
+  } else {
+    console.log('Worker log:', m);
   }
 }
 
