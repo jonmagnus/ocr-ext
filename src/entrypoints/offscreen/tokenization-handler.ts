@@ -32,7 +32,7 @@ async function* filterDictionary(dict: AsyncGenerator<string>, filter: AsyncGene
     if (dictKey < filterKey) {
       dictResult = await dict.next();
     } else if (dictKey > filterKey) {
-      //yield filterResult.value;
+      yield filterResult.value;
       filterResult = await filter.next();
     } else { // dictKey === filterKey
       yield dictResult.value;
@@ -65,6 +65,19 @@ async function* agFilter<T>(a: AsyncGenerator<T>, f: (arg: T) => boolean): Async
   }
 }
 
+async function* agUnique<T>(a: AsyncGenerator<T>): AsyncGenerator<T> {
+  let { done, value: prev } = await a.next();
+  if (!done) {
+    yield prev;
+    for await (const v of a) {
+      if (v != prev) {
+        yield v;
+      }
+      prev = v;
+    }
+  }
+}
+
 const logLines = <T>(ag: AsyncGenerator<T>, logList: T[]): AsyncGenerator<T> => agMap(
   ag, v => {
     logList.push(v);
@@ -93,7 +106,7 @@ const fetchFilteredDictionary = async (jiebaDictUrl: string, cedictUrl: string):
     ),
     line => line.split(' ')[1],
   );
-  const cedictLines = sortAg(cedictLines_);
+  const cedictLines = agUnique(sortAg(cedictLines_));
   
   const filteredJiebaLines = filterDictionary(jiebaDictLines, cedictLines);
   const textEncoder = new TextEncoder();
