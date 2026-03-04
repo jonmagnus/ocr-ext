@@ -49,13 +49,10 @@ const updateMouse = (
 
 const createResultDiv = (message: OCR_RESULT, rectangle: Rectangle): HTMLDivElement => {
   const resultDiv = document.createElement('div');
-  const textContainer = document.createElement('p');
-  textContainer.innerHTML = message.payload.text;
   const croppedImageContainer = document.createElement('img');
   croppedImageContainer.src = message.payload.imageUrl;
   croppedImageContainer.style.width = rectangle.width + 'px';
   resultDiv.appendChild(croppedImageContainer);
-  resultDiv.appendChild(textContainer);
   resultDiv.className = 'result-div';
   resultDiv.style.top = rectangle.top + 'px';
   resultDiv.style.left = rectangle.left + 'px';
@@ -63,8 +60,7 @@ const createResultDiv = (message: OCR_RESULT, rectangle: Rectangle): HTMLDivElem
   return resultDiv;
 };
 
-const canvasScript = (container: HTMLElement, tabId: number, windowId: number): void => {
-  console.log(`Received canvasScript with tabId ${tabId}`);
+const canvasScript = (container: HTMLElement, tabId: number, windowId: number, destroy: () => void): void => {
   let mouse: Mouse = {
     x: 0,
     y: 0,
@@ -112,7 +108,7 @@ const canvasScript = (container: HTMLElement, tabId: number, windowId: number): 
       .then((message) => {
         if (message?.type == 'OCR_RESULT') {
           resultDiv = createResultDiv(message, rectangle);
-          resultDiv.onclick = container.remove;
+          resultDiv.onclick = destroy;
           container.appendChild(resultDiv);
           const tokenizeRequest: TOKENIZE_REQUEST = {
             type: 'TOKENIZE_REQUEST',
@@ -165,9 +161,9 @@ export default defineContentScript({
         name: 'square-selector',
         position: 'overlay',
         anchor: 'body',
-        onMount(container) {
+        onMount(container, _shadow, shadowHost) {
           container.style.position = 'fixed';
-          canvasScript(container, tabId, windowId);
+          canvasScript(container, tabId, windowId, () => shadowHost.remove());
         }
       });
       shadowUi.mount();

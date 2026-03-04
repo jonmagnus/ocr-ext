@@ -7,8 +7,7 @@
     "dev": "wxt",
     "build": "wxt build",
     "compile": "tsc --noEmit",
-    "postinstall": "wxt prepare",
-    "prepare-dictionaries": "gunzip -c public/cedict_1_0_ts_utf-8_mdbg.txt.gz | sort > public/cedict-sorted.txt"
+    "postinstall": "wxt prepare"
 
   },
   "dependencies": {

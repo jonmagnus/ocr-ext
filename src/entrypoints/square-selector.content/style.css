@@ -3,13 +3,13 @@ p {
 }
 
 .rectangle {
-    position: absolute;
+    position: fixed;
     border: 1px solid red;
     pointer-events: none;
 }
 
 .result-div {
-    position: absolute;
+    position: fixed;
     background-color: white;
     pointer-events: auto;
 }
@@ -18,7 +18,7 @@ p {
     cursor: crosshair;
     top: 0;
     left: 0;
-    position: absolute;
+    position: fixed;
 }
 
 .word-wrapper {

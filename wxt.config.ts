@@ -15,9 +15,6 @@ export default defineConfig({
     icons: {
       48: 'logo.png',
     },
-    content_security_policy: {
-      extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
-    },
     commands: {
       select: {
         suggested_key: { default: 'Alt+A' },
