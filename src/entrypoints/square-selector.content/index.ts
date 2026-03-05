@@ -1,26 +1,14 @@
 import {
   OCR_QUERY,
-  OFFSCREEN_DOCUMENT_REQUEST,
   CANVAS_SCRIPT_PING,
-  TOKENIZE_REQUEST,
 } from '@/utils/messages';
+import {
+  Mouse,
+  Rectangle,
+} from './types';
+import { createResultDiv } from './result-div';
 
 import './style.css';
-import { createTokenContainer } from './token-container'
-
-type Mouse = {
-  x: number,
-  y: number,
-  startX: number,
-  startY: number,
-};
-
-type Rectangle = {
-  top: number,
-  left: number,
-  height: number,
-  width: number,
-};
 
 const rectangleFromMouse = (mouse: Mouse): Rectangle => ({
   left: Math.min(mouse.x, mouse.startX),
@@ -30,34 +18,20 @@ const rectangleFromMouse = (mouse: Mouse): Rectangle => ({
 });
 
 const updateMouse = (
+  canvas: HTMLCanvasElement,
   event: MouseEvent,
   mouse: Mouse,
-  rectangle: HTMLDivElement | null,
+  drawing: boolean,
 ): void => {
   mouse.x = event.clientX;
   mouse.y = event.clientY;
-  if (rectangle) {
+  if (drawing) {
     const { left, top, width, height } = rectangleFromMouse(mouse);
-    [
-      rectangle.style.left,
-      rectangle.style.top,
-      rectangle.style.width,
-      rectangle.style.height,
-    ] = [left, top, width, height].map(v => v + 'px');
+    const canvasContext = canvas.getContext('2d')!;
+    canvasContext.clearRect(0,0,canvas.width,canvas.height);
+    canvasContext.fillRect(0,0,canvas.width,canvas.height);
+    canvasContext.clearRect(left,top,width,height);
   }
-};
-
-const createResultDiv = (message: OCR_RESULT, rectangle: Rectangle): HTMLDivElement => {
-  const resultDiv = document.createElement('div');
-  const croppedImageContainer = document.createElement('img');
-  croppedImageContainer.src = message.payload.imageUrl;
-  croppedImageContainer.style.width = rectangle.width + 'px';
-  resultDiv.appendChild(croppedImageContainer);
-  resultDiv.className = 'result-div';
-  resultDiv.style.top = rectangle.top + 'px';
-  resultDiv.style.left = rectangle.left + 'px';
-  resultDiv.style.width = rectangle.width + 'px';
-  return resultDiv;
 };
 
 const canvasScript = (container: HTMLElement, tabId: number, windowId: number, destroy: () => void): void => {
@@ -67,7 +41,6 @@ const canvasScript = (container: HTMLElement, tabId: number, windowId: number, d
     startX: 0,
     startY: 0,
   }
-  let rectangleDiv: HTMLDivElement | null = null;
   const canvas = document.createElement('canvas');
   canvas.className = 'root-canvas';
   container.appendChild(canvas);
@@ -76,6 +49,8 @@ const canvasScript = (container: HTMLElement, tabId: number, windowId: number, d
   const resizeCanvas = () => {
     canvasContext.canvas.width = window.innerWidth;
     canvasContext.canvas.height = window.innerHeight;
+    canvasContext.globalAlpha = 0.5;
+    canvasContext.fillRect(0,0,window.innerWidth, window.innerHeight);
   };
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
@@ -83,17 +58,14 @@ const canvasScript = (container: HTMLElement, tabId: number, windowId: number, d
     canvas.remove();
     window.removeEventListener('resize', resizeCanvas);
   };
-  canvas.addEventListener('mousemove', (e) => updateMouse(e, mouse, rectangleDiv));
+  let drawing: boolean = false;
+  canvas.addEventListener('mousemove', (e) => updateMouse(canvas, e, mouse, drawing));
   canvas.addEventListener('click', () => {
-    if (rectangleDiv) {
-      rectangleDiv.remove();
-      rectangleDiv = null;
+    if (drawing) {
+      drawing = false;
       canvas.style.cursor = 'default';
       container.style.pointerEvents = 'none';
       removeCanvas();
-      const offscreenDocumentRequest: OFFSCREEN_DOCUMENT_REQUEST = {
-        type: 'OFFSCREEN_DOCUMENT_REQUEST',
-      };
       const rectangle = rectangleFromMouse(mouse);
       const ocrQuery: OCR_QUERY = {
         type: 'OCR_QUERY',
@@ -102,42 +74,12 @@ const canvasScript = (container: HTMLElement, tabId: number, windowId: number, d
           pixelRatio: window.devicePixelRatio,
         },
       };
-      let resultDiv: HTMLDivElement;
-      browser.runtime.sendMessage(offscreenDocumentRequest)
-      .then(() => browser.runtime.sendMessage(ocrQuery))
-      .then((message) => {
-        if (message?.type == 'OCR_RESULT') {
-          resultDiv = createResultDiv(message, rectangle);
-          resultDiv.onclick = destroy;
-          container.appendChild(resultDiv);
-          const tokenizeRequest: TOKENIZE_REQUEST = {
-            type: 'TOKENIZE_REQUEST',
-            payload: {
-              text: message.payload.text,
-            },
-          };
-          return browser.runtime.sendMessage(tokenizeRequest);
-        } else {
-          throw Error(`Did not receive OCR_RESULT from OCR_QUERY: ${JSON.stringify(message, null, 2)}`);
-        }
-      })
-      .then((message) => {
-        if (message?.type == 'TOKENIZE_RESPONSE') {
-          const tokenContainer = createTokenContainer(message.payload.annotation);
-          resultDiv.appendChild(tokenContainer);
-        } else {
-          throw Error(`Did not receive TOKENIZE_RESPONSE from TOKENIZE_REQUEST: ${JSON.stringify(message, null, 2)}`);
-        }
-      })
-      .catch(e => console.warn(e));
+      const resultDiv = createResultDiv(ocrQuery, rectangle, destroy);
+      container.appendChild(resultDiv);
     } else {
       mouse.startX = mouse.x;
       mouse.startY = mouse.y;
-      rectangleDiv = document.createElement('div');
-      rectangleDiv.className = 'rectangle';
-      rectangleDiv.style.left = mouse.x + 'px';
-      rectangleDiv.style.top = mouse.x + 'px';
-      container.appendChild(rectangleDiv);
+      drawing = true;
     }
   });
 }
